@@ -92,7 +92,7 @@ def getFrontMatter(item, docFormat, legacy=False, bare=False):
 
 
 def printPosts(item, fields, docFormat=None, writeToFiles=False,
-               legacyFrontmatter=False):
+               legacyFrontmatter=False, myMarkdownFormat=False):
     template = u"""
 {0}
 {1}
@@ -121,11 +121,28 @@ def printPosts(item, fields, docFormat=None, writeToFiles=False,
         else:
             print(content)
         logger.info("Finished print %s: %s", item['id'], filename)
+
+    elif myMarkdownFormat:
+        print("<!--")
+        if "blog" in item and "id" in item["blog"]:
+            print("    blog-id: {}".format(item["blog"]["id"]))
+
+        fields = fields.split(",")
+        for k in fields:
+            if k != "content" and k in item:
+                if type(item[k]) == list:
+                    # Print list (of labels) without brackets
+                    print("    {}: {}".format(k, ",".join(item[k])))
+                else:
+                    print("    {}: {}".format(k, item[k]))
+        print("-->")
+        if "content" in item:
+            print(item["content"])
+
     elif isinstance(fields, basestring):
         fields = fields.split(",")
         line = [str(item[k]) for k in fields if k in item]
         print(",".join(line))
-
 
 def parse_args(sysargv):
     pandocInputFormats, pandocOutputFormats = pypandoc.get_pandoc_formats()
@@ -167,6 +184,10 @@ def parse_args(sysargv):
     get_parser.add_argument(
         "-n", "--no-content", dest='nocontent',
         help="The body content of posts will not be included. Use it when the post bodies are not required, to help minimize traffic.",
+        action="store_true")
+    get_parser.add_argument(
+        "-m", "--my-markdown", dest='mymarkdown',
+        help="My markdown format",
         action="store_true")
     group = get_parser.add_mutually_exclusive_group()
     group.add_argument("-p", "--postId", help="the post id")
@@ -359,7 +380,7 @@ def processItem(args, contentArgs=None):
                     maxResults=args.count)
             jobs = [gevent.spawn(printPosts,
                                  item, args.fields, args.doc, args.tofiles,
-                                 args.legacyFrontmatter)
+                                 args.legacyFrontmatter, args.mymarkdown)
                     for item in posts]
             gevent.wait(jobs)
 
