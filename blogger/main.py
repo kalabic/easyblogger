@@ -14,7 +14,8 @@ import chardet
 
 from gevent import monkey
 from oauth2client.client import AccessTokenRefreshError
-from .blogger import ContentArgParser, EasyBlogger
+import blogger
+from blogger import EasyBlogger
 from io import open
 try:
     from urllib.parse import urlparse

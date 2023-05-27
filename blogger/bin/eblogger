@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+#
+# Wrapper for Python scripts to enable them to be used from any location from command line.
+# Add directory with native system scripts to local user PATH.
+#
+
+python_name=python3
+
+# Where is script called from.
+exec_dir=$(pwd -P)
+
+# Directory name of the script no matter where it is being called from.
+# (see: https://stackoverflow.com/a/246128/852428)
+script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && cd ..; pwd -P)
+
+#
+# If Python virtual environment is not found, try to install it.
+#
+if [ ! -f "$script_dir/venv/bin/activate" ]
+then
+  echo "Python virtual environment not found, trying to install it..."
+
+  if ! [ "$exec_dir" = "$script_dir" ]
+  then
+    echo "Changing working folder to location of Python script: $script_dir"
+    cd $script_dir
+  fi
+
+  echo "Setting up Python virtual environment..."
+
+  if ! $python_name -m venv venv
+  then
+    echo "error: venv failed, cannot continue"
+    exit 1
+  fi
+
+  if ! source venv/bin/activate
+  then
+    echo "error: venv failed, cannot continue"
+    exit 1
+  fi
+
+  if ! pip install -r requirements.txt
+  then
+    echo "error: requirements install failed, cannot continue"
+    exit 1
+  fi
+
+  if ! [ "$exec_dir" = "$script_dir" ]
+  then
+    echo "Changing back to working folder and attempting to run Python script from there."
+    cd $exec_dir
+  fi
+fi
+
+script_args=""
+for unsafe_var in "$@"
+do
+
+  # Replace spaces with '\ ' character in our directory path.
+  var=`printf "%s" "$unsafe_var" | sed 's/ /\\\\ /g'`
+
+  # For debugging Unicode and such.
+  # echo "UNSAFE: $unsafe_var"
+  # echo "  SAFE: $var"
+
+  if [ "$unsafe_var" = "$var" ]
+  then
+    script_args+=" "
+    script_args+=$unsafe_var
+  else
+    script_args+=" "
+    script_args+=$var
+  fi
+
+done
+
+if ! source "$script_dir/venv/bin/activate"
+then
+  echo "error: venv failed, cannot continue"
+  exit 1
+fi
+
+# For debugging: set -o xtrace
+bash -c "$python_name -u $script_dir/main.py $script_args"
+
+# Exit with the same result like gphoto.py from python shell above.
+exit $?
