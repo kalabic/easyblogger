@@ -5,6 +5,14 @@
 # Add directory with native system scripts to local user PATH.
 #
 
+echoerr() { printf "%s\n" "$*" >&2; }
+
+# trap ctrl-c, this allows commands placed inside `` and $() to exit gracefully
+function ctrl_c() {
+  echoerr "eblogger: trapped ctrl-c"
+}
+trap ctrl_c INT
+
 python_name=python3
 
 # Where is script called from.
@@ -31,19 +39,19 @@ then
 
   if ! $python_name -m venv venv
   then
-    echo "error: venv failed, cannot continue"
+    echoerr "error: venv failed, cannot continue"
     exit 1
   fi
 
   if ! source venv/bin/activate
   then
-    echo "error: venv failed, cannot continue"
+    echoerr "error: venv failed, cannot continue"
     exit 1
   fi
 
   if ! pip install -r requirements.txt
   then
-    echo "error: requirements install failed, cannot continue"
+    echoerr "error: requirements install failed, cannot continue"
     exit 1
   fi
 
@@ -78,12 +86,12 @@ done
 
 if ! source "$script_dir/venv/bin/activate"
 then
-  echo "error: venv failed, cannot continue"
+  echoerr "error: venv failed, cannot continue"
   exit 1
 fi
 
 # For debugging: set -o xtrace
-bash -c "$python_name -u $script_dir/main.py $script_args"
+$python_name -u $script_dir/main.py $script_args
 
 # Exit with the same result like gphoto.py from python shell above.
 exit $?
