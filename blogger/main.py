@@ -12,6 +12,8 @@ import copy
 import glob
 import chardet
 
+from apiclient.errors import HttpError
+
 from gevent import monkey
 from oauth2client.client import AccessTokenRefreshError
 import blogger
@@ -38,9 +40,13 @@ else:
     bytes = str
     basestring = basestring
 
-monkey.patch_all()
-logging.basicConfig()
-logger = logging.getLogger(__name__)
+try:
+    monkey.patch_all()
+    logging.basicConfig()
+    logger = logging.getLogger(__name__)
+except KeyboardInterrupt as ke:
+    sys.stderr.write("KeyboardInterrupt Exception during init, exiting.\n")
+    sys.exit(1)
 
 
 def toUnicode(s):
@@ -320,9 +326,21 @@ def parse_args(sysargv):
 
 
 def main(sysargv=sys.argv):
-    args = parse_args(sysargv[1:])
-    return runner(args)
+    try:
+        args = parse_args(sysargv[1:])
+        result = runner(args)
+        sys.exit(result)
 
+    except HttpError as he:
+        if he.resp.status == 429:
+            sys.stderr.write("error: Http Exception, Quota")
+        else:
+            sys.stderr.write("error: Http Exception, status code: {}".format(he.resp.status))
+        sys.exit(1)
+
+    except KeyboardInterrupt as ke:
+        sys.stderr.write("KeyboardInterrupt Exception, exiting.\n")
+        sys.exit(1)
 
 def processItem(args, contentArgs=None):
     blogger = EasyBlogger(args.clientid, args.secret, args.blogid,
