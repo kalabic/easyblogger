@@ -91,7 +91,8 @@ then
 fi
 
 # For debugging: set -o xtrace
-$python_name -u $script_dir/main.py $script_args
+# Only using bash -c "..." works with arguments with spaces, even if they are quoted. Why??
+bash -c "$python_name -u $script_dir/main.py $script_args"
 
 # Exit with the same result like gphoto.py from python shell above.
 exit $?
